@@ -14,4 +14,9 @@ connection.connect((err) => {
         console.log('db connect err ===', err);
     }
     console.log('database connection ok ===');
-})
+    setTimeout(() => {
+        console.log('welcome to my Employee Tracker program!');
+    }, 1000);
+    
+});
+
