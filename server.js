@@ -52,7 +52,7 @@ function start() {
                     addDepartment();
                     break;
                 case "Add Role":
-                    viewAllDepartments();
+                    addRole();
                     break;
                 case "Add Employee":
                     viewAllDepartments();
@@ -143,6 +143,7 @@ function addDepartment() {
                 if (err) {
                     console.log("addDepartment error ===", err);
                 }
+                console.log("add department success!");
                 inquirer
                     .prompt({
                         type: "confirm",
@@ -158,6 +159,96 @@ function addDepartment() {
                     });
             });
         });
+}
+
+function addRole() {
+    const getDepartments = new Promise((resolve, reject) => {
+        let departmentList = [];
+        const sql = `SELECT name FROM department`;
+        connection.query(sql, (err, data) => {
+            if (err) {
+                console.log("get departmentList ===", err);
+            }
+            for (let index = 0; index < data.length; index++) {
+                const element = data[index];
+                departmentList.push(element['name']);
+            }
+            resolve(departmentList);
+        });
+    });
+
+    getDepartments.then((res) => {
+        inquirer
+            .prompt([
+                {
+                    type: "text",
+                    name: "roleTitle",
+                    message: "What is the title of your role?",
+                    validate: (input) => {
+                        if (input) {
+                            return true;
+                        } else {
+                            console.log("please enter title for your role");
+                            return false;
+                        }
+                    },
+                },
+                {
+                    type: "number",
+                    name: "roleSalary",
+                    message: "What is the salary of your role?",
+                    validate: (input) => {
+                        if (input) {
+                            return true;
+                        } else {
+                            console.log("please enter salary for your role");
+                            return false;
+                        }
+                    },
+                    filter: (input) => {
+                        if (!input || input === NaN) {
+                            return "";
+                        } else {
+                            return input;
+                        }
+                    },
+                },
+                {
+                    type: "list",
+                    name: "departmentId",
+                    message: "Which department dose the role belong to?",
+                    choices: res,
+                    filter: (input) => {
+                        if (input) {
+                            return res.indexOf(input);
+                        }
+                    },
+                },
+            ])
+            .then(({ roleTitle, roleSalary, departmentId }) => {
+                const sql = `INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)`;
+                const data = [roleTitle, roleSalary, departmentId + 1];
+                connection.query(sql, data, (err, res) => {
+                    if (err) {
+                        console.log("addRole error ===", err);
+                    }
+                    console.log("add role success!");
+                    inquirer
+                        .prompt({
+                            type: "confirm",
+                            name: "result",
+                            message: "check added role",
+                        })
+                        .then(({ result }) => {
+                            if (result) {
+                                viewAllRoles();
+                            } else {
+                                restart();
+                            }
+                        });
+                });
+            });
+    });
 }
 
 function quit() {
