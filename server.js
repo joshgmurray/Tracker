@@ -55,7 +55,7 @@ function start() {
                     addRole();
                     break;
                 case "Add Employee":
-                    viewAllDepartments();
+                    addEmployee();
                     break;
                 case "Quit":
                     quit();
@@ -171,7 +171,7 @@ function addRole() {
             }
             for (let index = 0; index < data.length; index++) {
                 const element = data[index];
-                departmentList.push(element['name']);
+                departmentList.push(element["name"]);
             }
             resolve(departmentList);
         });
@@ -249,6 +249,118 @@ function addRole() {
                 });
             });
     });
+}
+
+function addEmployee() {
+    const getRoleTitles = new Promise((resolve, reject) => {
+        let titleList = [];
+        const sql = `SELECT title FROM role`;
+        connection.query(sql, (err, data) => {
+            if (err) {
+                console.log("get titleList err ===", err);
+            }
+            for (let index = 0; index < data.length; index++) {
+                const element = data[index];
+                titleList.push(element["title"]);
+            }
+            resolve(titleList);
+        });
+    });
+    const getManagerList = new Promise((resolve, reject) => {
+        let managerList = [];
+        // SELECT DISTINCT CONCAT(m.first_name, ' ', m.last_name) AS manager FROM employee e, employee m WHERE m.id = e.manager_id
+        const sql = `SELECT CONCAT(first_name, ' ', last_name) AS manager FROM employee`;
+        connection.query(sql, (err, data) => {
+            if (err) {
+                console.log("getManagerList err ===", err);
+            }
+            for (let index = 0; index < data.length; index++) {
+                const element = data[index];
+                managerList.push(element["manager"]);
+            }
+            resolve(managerList);
+        });
+    });
+
+    Promise.all([getRoleTitles, getManagerList]).then(
+        ([titleList, managerList]) => {
+            inquirer
+                .prompt([
+                    {
+                        type: "text",
+                        name: "firstName",
+                        message: "What is the employee first name?",
+                        validate: (input) => {
+                            if (input) {
+                                return true;
+                            } else {
+                                console.log("please enter employee first name!");
+                                return false;
+                            }
+                        },
+                    },
+                    {
+                        type: "text",
+                        name: "lastName",
+                        message: "What is the employee last name?",
+                        validate: (input) => {
+                            if (input) {
+                                return true;
+                            } else {
+                                console.log("please enter employee last name!");
+                                return false;
+                            }
+                        },
+                    },
+                    {
+                        type: "list",
+                        name: "roleID",
+                        message: "What is the employee role title?",
+                        choices: titleList,
+                        filter: (input) => {
+                            if (input) {
+                                return titleList.indexOf(input);
+                            }
+                        },
+                    },
+                    {
+                        type: "list",
+                        name: "managerID",
+                        message: "who is the employee's manager?",
+                        choices: managerList,
+                        filter: (input) => {
+                            if (input) {
+                                return managerList.indexOf(input);
+                            }
+                        },
+                    },
+                ])
+                .then(({ firstName, lastName, roleID, managerID }) => {
+                    const sql =
+                        "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)";
+                    const data = [firstName, lastName, roleID + 1, managerID + 1];
+                    connection.query(sql, data, (err, res) => {
+                        if (err) {
+                            console.log("add employee err ===", err);
+                        }
+                        console.log("add employee success!");
+                        inquirer
+                            .prompt({
+                                type: "confirm",
+                                name: "result",
+                                message: "check employee role",
+                            })
+                            .then(({ result }) => {
+                                if (result) {
+                                    viewAllEmployees();
+                                } else {
+                                    restart();
+                                }
+                            });
+                    });
+                });
+        }
+    );
 }
 
 function quit() {
